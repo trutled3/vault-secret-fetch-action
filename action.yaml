@@ -33,15 +33,9 @@ description: |
   > Some critical details to keep in mind when using this action:
   >
   > - `id-token: write` and `contents: read` permissions are required for this action to work.
-  > - This action **only** integrates with the new Vault cluster located at
-  >   [`https://vault.ci.duke-energy.app`](https://vault.ci.duke-energy.app).
-  > - Authorization is handled on the backend using the appcat product assigned to your repo. This
-  >   makes it **IMPERATIVE that you set your appcat-product custom property when creating your repo**.
   >   - Authorization is also handled on the Vault backend to make sure only repos you assign to your
   >     Vault safe can access the secrets in that safe, so **make sure you add the repository you are
-  >     running the action from to your `allowed-repositories` secret in vault**. This is to prevent
-  >     bad actors from entering other teams' appcat products as a custom property on their repo to
-  >     gain access to secrets.
+  >     running the action is trusted in the bound claims of the JWT role
   >   - There is up to a **10 minute delay** from when you add your repo to the allowed list to when
   >     this action is able to run against it.
   > - You may use the full path to obtain your secrets from vault, but it is unnecessary due to the
@@ -88,7 +82,7 @@ runs:
         JWT_TOKEN: ${{ steps.generate-jwt.outputs.jwt_token }}
         JWT_ROLE: ${{ inputs.jwt-role-name }}
         JWT_MOUNT_PATH: ${{ inputs.jwt-mount-path }}
-        PRODUCT_NAME: ${{ github.event.repository.custom_properties.appcat-product }}
+        PRODUCT_NAME: team
         DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
         RAW_SECRETS: ${{ inputs.secrets }}
       run: |
@@ -101,7 +95,7 @@ runs:
         JWT_TOKEN: ${{ steps.generate-jwt.outputs.jwt_token }}
         JWT_ROLE: ${{ inputs.jwt-role-name }}
         JWT_MOUNT_PATH: ${{ inputs.jwt-mount-path }}
-        PRODUCT_NAME: ${{ github.event.repository.custom_properties.appcat-product }}
+        PRODUCT_NAME: team
         DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
         RAW_SECRETS: ${{ inputs.secrets }}
       run: |
@@ -115,7 +109,7 @@ runs:
         JWT_TOKEN: ${{ steps.generate-jwt.outputs.jwt_token }}
         JWT_ROLE: ${{ inputs.jwt-role-name }}
         JWT_MOUNT_PATH: ${{ inputs.jwt-mount-path }}
-        PRODUCT_NAME: ${{ github.event.repository.custom_properties.appcat-product }}
+        PRODUCT_NAME: team
         DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
         RAW_SECRETS: ${{ inputs.secrets }}
       run: |

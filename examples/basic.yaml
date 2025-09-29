@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: "Fetch Multiple Vault Secrets"
+
+on: [push]
+
+jobs:
+  my-job-name:
+    runs-on: ${{ vars.RUNNERSET_DEFAULT }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: REDACTED/vault-fetch@master
+        with:
+          deploy-environment: prod
+          secrets: |
+            your-secret-name your-key-name | YOUR_ENV_VAR_NAME;
+            your-secret-name some-other-key | SOME_OTHER_KEY;
+            foo-bar value | FOO_BAR;
+
+      - name: use fetched secrets
+        run: |
+          # these won't actually be printed out, as they are masked by the "vault-fetch" composite action.
+          # don't do this in your real code, it's just for demonstration purposes.
+          echo "your-secret-name: $YOUR_ENV_VAR_NAME"
+          echo "foo-bar: $FOO_BAR"
