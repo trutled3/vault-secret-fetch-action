@@ -1,0 +1,126 @@
+name: vault-fetch
+
+description: |
+  Read HashiCorp Vault™ secrets as secure environment variables.
+
+  This action will fetch secrets from HashiCorp Vault™ and set them as environment variables for use
+  in subsequent steps. The secrets are fetched using a custom CLI tool written in golang, which is auto-configured and installed as part of this action.
+
+  ### 🚀 Features
+
+  - ✅ Stores Vault secrets as environment variableas for followup steps.
+  - ✅ Auto-masks secrets in logs.
+  - ✅ Supports dynamic lookup paths, so you have to hard-code less (see below).
+  - ✅ Supports fetching entire secret value as JSON encoded string (see examples).
+  - ✅ Authentication is handled automagically through GitHub OIDC.
+
+  ### ⚡ Hierarchical Lookup Support
+
+  When you have the same secret defined in multiple places the GitHub Composite action will automatically go through each of the paths mentioned above and return the value of the secret, highest in the hierarchy.
+
+  | Priority | Hierarchy Level | Example Path |
+  |----------|-----------------|--------------|
+  | 1        | Secret within a path matching the name of a workflow | `<product>/<repo>/<workflow>/<secret-name>` |
+  | 2        | Secret within an environmental path for a repository | `<product>/<repo>/<environment>/<secret-name>` |
+  | 3        | Secret within the path for a repository | `<product>/<repo>/<secret-name>` |
+  | 4        | Secret within an environmental path at the root of your product path | `<product>/<environment>/<secret-name>` |
+  | 5        | Secret within the root of your product path | `<product>/<secret-name>` |
+  | 6        | Global secret (non-visible, used for reusable secrets across teams) | `github-global/<secret-name>` |
+
+  -----
+
+  > [!CAUTION]
+  > Some critical details to keep in mind when using this action:
+  >
+  > - `id-token: write` and `contents: read` permissions are required for this action to work.
+  > - This action **only** integrates with the new Vault cluster located at
+  >   [`https://vault.ci.duke-energy.app`](https://vault.ci.duke-energy.app).
+  > - Authorization is handled on the backend using the appcat product assigned to your repo. This
+  >   makes it **IMPERATIVE that you set your appcat-product custom property when creating your repo**.
+  >   - Authorization is also handled on the Vault backend to make sure only repos you assign to your
+  >     Vault safe can access the secrets in that safe, so **make sure you add the repository you are
+  >     running the action from to your `allowed-repositories` secret in vault**. This is to prevent
+  >     bad actors from entering other teams' appcat products as a custom property on their repo to
+  >     gain access to secrets.
+  >   - There is up to a **10 minute delay** from when you add your repo to the allowed list to when
+  >     this action is able to run against it.
+  > - You may use the full path to obtain your secrets from vault, but it is unnecessary due to the
+  >   built-in support for [hierarchical lookup](#zap-hierarchical-lookup-support).
+
+inputs:
+  deploy-environment:
+    description: >-
+      What is the target environment for this branch? Must be one of: `sbx`, `dev`, `qa`, or `prod`
+    required: false
+  secrets:
+    description: >-
+      A semicolon-separated list of secrets to retrieve. These will automatically be converted to
+      environmental variable keys. Format is multi-line of: `<secret-name> <key-name> \| <env-var-name>;`
+    required: true
+  vault-secret-fetch-version:
+    description: >-
+      The version of the vault-cli to install.
+    required: false
+    default: "latest"
+  jwt-role-name:
+    description: >-
+      The JWT role name to login in to within Vault.
+    required: false
+    default: role-name
+  jwt-mount-path:
+    description: >-
+      The JWT mount path for the OIDC/JWT authentication method in Vault.
+    required: false
+    default: jwt
+runs:
+  using: "composite"
+  steps:
+    - name: Generate JWT Token
+      shell: bash
+      id: generate-jwt
+      run: |
+        JWT_TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
+        echo "jwt_token=$JWT_TOKEN" >> $GITHUB_OUTPUT
+    - name: Go Do A Thing 🚀 (Linux)
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      env:
+        JWT_TOKEN: ${{ steps.generate-jwt.outputs.jwt_token }}
+        JWT_ROLE: ${{ inputs.jwt-role-name }}
+        JWT_MOUNT_PATH: ${{ inputs.jwt-mount-path }}
+        PRODUCT_NAME: ${{ github.event.repository.custom_properties.appcat-product }}
+        DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
+        RAW_SECRETS: ${{ inputs.secrets }}
+      run: |
+        # redacted CLI installer
+        vault-secret-fetch
+    - name: Go Do A Thing 🚀 (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: bash
+      env:
+        JWT_TOKEN: ${{ steps.generate-jwt.outputs.jwt_token }}
+        JWT_ROLE: ${{ inputs.jwt-role-name }}
+        JWT_MOUNT_PATH: ${{ inputs.jwt-mount-path }}
+        PRODUCT_NAME: ${{ github.event.repository.custom_properties.appcat-product }}
+        DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
+        RAW_SECRETS: ${{ inputs.secrets }}
+      run: |
+        echo "Set environment variables, installing vault-secret-fetch and fetching secrets."
+        # redacted CLI installer
+        rm "$USERPROFILE/vault-secret-fetch.exe"
+    - name: Go Do A Thing 🚀 (macOS)
+      if: ${{ runner.os == 'macOS' }}
+      shell: bash
+      env:
+        JWT_TOKEN: ${{ steps.generate-jwt.outputs.jwt_token }}
+        JWT_ROLE: ${{ inputs.jwt-role-name }}
+        JWT_MOUNT_PATH: ${{ inputs.jwt-mount-path }}
+        PRODUCT_NAME: ${{ github.event.repository.custom_properties.appcat-product }}
+        DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
+        RAW_SECRETS: ${{ inputs.secrets }}
+      run: |
+        echo "Set environment variables, installing vault-secret-fetch and fetching secrets."
+        # redacted CLI Installer
+        chmod +x $HOME/vault-secret-fetch
+        $HOME/vault-secret-fetch
+        rm $HOME/vault-secret-fetch
