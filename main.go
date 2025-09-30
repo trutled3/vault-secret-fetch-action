@@ -160,6 +160,10 @@ func BuildLookupHeirarchy(secret Secret, productName, repositoryName, workflowNa
 	// if not continue to heirarchy lookup
 
 	// Order of heirarchy
+	// 1. products/productA/repositoryA/workflowA/environment/secret
+	// 2. products/productA/repositoryA/workflowA/secret
+	// 3. products/productA/repositoryA/secret
+	// 4. products/productA/secret
 	lookupHeirarchy := []path{}
 
 	// REDACTED but appends a predefined list of paths to fetch secret from in order of precidence
